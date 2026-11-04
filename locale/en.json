@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Vietnamese (dsh-locale-vi)",
+    "description": "Adds the Vietnamese language to the client catalog together with UI dictionaries for the plugins that ship i18n dictionaries. Pick it in Settings > Language."
+  }
+}

@@ -1,0 +1,7 @@
+# Bundle patch layer: the row loads the package's main entry as the host half
+# (a no-op Cordis plugin); the `dsh.client` declaration in package.json makes
+# the web app load ./client as the browser half, which registers the language
+# "vi" and its dictionaries.
+- insert:
+    - id: dsh-locale-vi
+      name: dsh-locale-vi

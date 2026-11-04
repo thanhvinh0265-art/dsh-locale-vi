@@ -1,0 +1,45 @@
+{
+  "name": "dsh-locale-vi",
+  "version": "0.1.0",
+  "description": "Gói tiếng Việt cho DeepSeek Harness: thêm ngôn ngữ 'Tiếng Việt' và từ điển giao diện cho các plugin có từ điển i18n.",
+  "type": "module",
+  "license": "MIT",
+  "author": "Đặng Thành Vinh",
+  "keywords": [
+    "dsh-plugin",
+    "dsh",
+    "deepseek-harness",
+    "locale",
+    "i18n",
+    "vietnamese"
+  ],
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./package.json": "./package.json",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "icon.svg",
+    "icon.png",
+    "README.md",
+    "LICENSE"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-locale"
+      ]
+    }
+  }
+}
