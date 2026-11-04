@@ -11,7 +11,8 @@
     "deepseek-harness",
     "locale",
     "i18n",
-    "vietnamese"
+    "vietnamese",
+    "deepseek"
   ],
   "main": "index.js",
   "exports": {
