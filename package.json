@@ -41,5 +41,13 @@
         "@deepseek-ai/dsh-client-locale"
       ]
     }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/thanhvinh0265-art/dsh-locale-vi.git"
+  },
+  "homepage": "https://github.com/thanhvinh0265-art/dsh-locale-vi#readme",
+  "bugs": {
+    "url": "https://github.com/thanhvinh0265-art/dsh-locale-vi/issues"
   }
 }
