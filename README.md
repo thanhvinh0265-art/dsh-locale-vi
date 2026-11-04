@@ -17,8 +17,7 @@ client plugin that publishes English strings through `ctx.locale`.
 ## Install
 
 ```sh
-dsh plugin --profile <profile> add dsh-locale-vi                    # from npm
-dsh plugin --profile <profile> add github:<owner>/dsh-locale-vi     # from this repo
+dsh plugin --profile <profile> add github:thanhvinh0265-art/dsh-locale-vi
 ```
 
 Or, on a desktop build, install it from the app's own **Settings → Plugins** page and reload the page.
