@@ -26,9 +26,12 @@ const CLIENT_FILE = path.join(PLUGIN_DIR, 'client.js')
 const MARK_BEGIN = '/* VI-DICTS-BEGIN */'
 const MARK_END = '/* VI-DICTS-END */'
 
-const KEY_RE = /^[a-z][A-Za-z0-9_-]*(?:\.[A-Za-z0-9_-]+)+$/
-const PAIR_RE = /"([A-Za-z][A-Za-z0-9_.-]*)"\s*:\s*(`[^`]*`|"(?:[^"\\]|\\.)*")/g
+// A dictionary pair: quoted key, single-quoted key, or a bare identifier key
+// (`nav: "Built-in plugins"`). Bare keys are common in newer DSH bundles.
+const PAIR_RE = /(?:"([^"\\]{1,200})"|'([^'\\]{1,200})'|([A-Za-z_$][\w$]{0,80}))\s*:\s*("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`[^`]*`)/g
+const REGISTER_RE = /locale\.register\(/g
 const CJK_RE = /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff]/
+const NS_ALIAS = { 'plugin:dsh-context': 'dsh-context' }
 const MAX_PER_RUN = 250
 
 export const name = 'dsh-locale-vi'
@@ -140,42 +143,125 @@ async function readAsarEntries() {
   return []
 }
 
-/** Pull `<ns, dict>` out of one Client bundle's source text. */
-function extractDict(text, fallbackLabel) {
+/** Source slice from `start` through the matching close character. */
+function balancedAt(text, start, open, close) {
+  let depth = 0
+  let quote = null
+  for (let i = start; i < text.length; i += 1) {
+    const ch = text[i]
+    if (quote) {
+      if (ch === '\\') i += 1
+      else if (ch === quote) quote = null
+      continue
+    }
+    if (ch === '"' || ch === "'" || ch === '`') quote = ch
+    else if (ch === open) depth += 1
+    else if (ch === close) {
+      depth -= 1
+      if (depth === 0) return text.slice(start, i + 1)
+    }
+  }
+  return null
+}
+
+/** `const X = { ... }` body for an identifier, if the bundle declares one. */
+function findConstObject(text, ident) {
+  const at = text.search(new RegExp('(?:const|let|var)\\s+' + ident.replace(/\$/g, '\\$') + '\\s*=\\s*\\{'))
+  if (at < 0) return null
+  const open = text.indexOf('{', at)
+  return open < 0 ? null : balancedAt(text, open, '{', '}')
+}
+
+/** Split an object body on top-level commas. */
+function splitTop(body) {
+  const parts = []
+  let depth = 0
+  let buf = ''
+  for (const ch of body) {
+    if (ch === '{' || ch === '[' || ch === '(') depth += 1
+    else if (ch === '}' || ch === ']' || ch === ')') depth -= 1
+    if (ch === ',' && depth === 0) {
+      parts.push(buf.trim())
+      buf = ''
+    } else buf += ch
+  }
+  if (buf.trim()) parts.push(buf.trim())
+  return parts
+}
+
+/** Every `<key: english>` pair inside one dictionary literal. */
+function parsePairs(blob) {
   const dict = {}
-  let ns = null
-  const nsMatch = /locale\.register\(\s*(?:"([^"]+)"|'([^']+)'|[A-Za-z0-9_$]+)/.exec(text)
-  if (nsMatch) {
-    const literal = nsMatch[1] || nsMatch[2]
-    if (literal) ns = literal
-  }
-  if (!ns) {
-    // Fall back to the `const NS = "..."` that usually names the namespace.
-    const constMatch = /(?:const|let|var)\s+[A-Za-z0-9_$]+\s*=\s*[`'"]([a-z0-9][A-Za-z0-9_-]*(?:\.[A-Za-z0-9_-]+)*)[`'"]/.exec(text)
-    if (constMatch) ns = constMatch[1]
-  }
-  if (!ns) return null
-  for (const match of text.matchAll(PAIR_RE)) {
-    const key = match[1]
-    if (!KEY_RE.test(key)) continue
-    let value = match[2]
-    if (value.startsWith('`')) value = value.slice(1, -1)
-    else value = value.slice(1, -1).replace(/\\(.)/g, '$1')
+  for (const match of blob.matchAll(PAIR_RE)) {
+    const key = match[1] || match[2] || match[3]
+    if (!key || key === '__proto__' || key === 'constructor' || key === 'prototype') continue
+    let value = match[4]
+    value = value.slice(1, -1).replace(/\\(.)/g, '$1')
     if (!value.trim()) continue
-    if (CJK_RE.test(value)) continue // Chinese text is not an English source string.
+    if (CJK_RE.test(value)) continue // Chinese copy is not an English source string.
     if (dict[key] === undefined) dict[key] = value
   }
-  return Object.keys(dict).length ? { ns, dict, label: fallbackLabel } : null
+  return dict
+}
+
+/** All `<ns, english dict>` pairs published by one Client bundle. */
+function extractDicts(text) {
+  const out = []
+  if (!text.includes('locale.register(')) return out
+  for (const m of text.matchAll(REGISTER_RE)) {
+    const call = balancedAt(text, m.index + 'locale.register'.length, '(', ')')
+    if (!call) continue
+    const args = call.slice(1, -1)
+    const first = args.split(',')[0].trim()
+    let ns = null
+    const lit = /^["'`]([^"'`]+)["'`]$/.exec(first)
+    if (lit) ns = lit[1]
+    else {
+      const decl = new RegExp('(?:const|let|var)\\s+' + first.replace(/\$/g, '\\$') + '\\s*=\\s*["\'`]([^"\'`]+)["\'`]').exec(text)
+      if (decl) ns = decl[1]
+    }
+    if (!ns) continue
+    ns = NS_ALIAS[ns] || ns
+    const rest = args.slice(first.length).replace(/^\s*,\s*/, '').trim()
+    if (!rest.startsWith('{')) continue
+    const inner = balancedAt(rest, 0, '{', '}')
+    if (!inner) continue
+    const dict = {}
+    for (const part of splitTop(inner.slice(1, -1))) {
+      let which = null
+      let ident = null
+      if (part === 'zh' || part === 'en') which = ident = part
+      else {
+        const pair = /^(zh|en)\s*:\s*([A-Za-z_$][\w$]*)$/.exec(part)
+        if (pair) {
+          which = pair[1]
+          ident = pair[2]
+        }
+      }
+      if (which === 'en' && ident) {
+        const blob = findConstObject(text, ident)
+        if (blob) Object.assign(dict, parsePairs(blob))
+      } else {
+        const inline = /^en\s*:\s*\{/.exec(part)
+        if (inline) {
+          const blob = balancedAt(part, part.indexOf('{'), '{', '}')
+          if (blob) Object.assign(dict, parsePairs(blob))
+        }
+      }
+    }
+    if (Object.keys(dict).length) out.push({ ns, dict })
+  }
+  return out
 }
 
 async function scanCorpus() {
   const corpus = {}
-  const parse = (entry, text) => {
-    const found = extractDict(text, entry.label)
-    if (!found) return
-    corpus[found.ns] = corpus[found.ns] || {}
-    for (const [key, value] of Object.entries(found.dict)) {
-      if (corpus[found.ns][key] === undefined) corpus[found.ns][key] = value
+  const parse = (_entry, text) => {
+    for (const found of extractDicts(text)) {
+      corpus[found.ns] = corpus[found.ns] || {}
+      for (const [key, value] of Object.entries(found.dict)) {
+        if (corpus[found.ns][key] === undefined) corpus[found.ns][key] = value
+      }
     }
   }
   for (const entry of await listSiblingBundles()) {

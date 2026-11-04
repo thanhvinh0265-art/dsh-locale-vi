@@ -8,11 +8,21 @@ client plugin that publishes English strings through `ctx.locale`.
 | | |
 |---|---|
 | Languages added | `vi` (fallback `en`) |
-| Namespaces | **29** |
-| Translated keys | **2,354** |
-| Source strings | ~46,400 characters of English |
+| Namespaces | **61** |
+| Translated keys | **3,477** |
+| Source strings | ~84,000 characters of English |
 | Dependencies | none |
 | Host code | optional: the `/vi-sync` command (re-scans installed plugins for new English strings) |
+
+## Changelog
+
+- **0.2.0** — extraction rewrite: bundles that write dictionary keys as bare identifiers
+  (`nav: "Built-in plugins"`) were skipped by 0.1.0, which left Settings, Plugin Manager,
+  Model settings, Account, Shortcuts, Schedule and the sidebar panels in English. 32 new
+  namespaces (settings.*, pluginManager, pluginMarket, shortcuts, schedule.manager,
+  sidebar*, permission.*, …) and 1,123 new keys are now covered; `/vi-sync` uses the same
+  parser, so future bundles resolve correctly.
+- **0.1.0** — first release: 29 namespaces, 2,354 keys.
 
 ## Install
 
