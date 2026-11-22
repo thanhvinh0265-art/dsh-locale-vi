@@ -335,6 +335,11 @@ async function writeDict(dicts) {
 async function runSync(ctx, signal) {
   const dicts = await loadDict()
   const corpus = await scanCorpus()
+  if (!Object.keys(corpus).length) {
+    // Never claim success when nothing was even read: that hides a scanner bug
+    // behind an "already complete" answer (the 0.2.0 asar-offset regression).
+    return 'Không đọc được bundle giao diện nào (app.asar và node_modules). Kiểm tra bản cài DSH hoặc cập nhật plugin.'
+  }
   const missing = []
   for (const [ns, entries] of Object.entries(corpus)) {
     for (const [key, value] of Object.entries(entries)) {
