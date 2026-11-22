@@ -1,6 +1,6 @@
 {
   "name": "dsh-locale-vi",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Vietnamese language pack for DeepSeek Harness: adds the 'Tiếng Việt' UI language and a dictionary for every client plugin that publishes strings through ctx.locale.",
   "type": "module",
   "license": "MIT",

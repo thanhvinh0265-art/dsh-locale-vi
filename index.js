@@ -119,9 +119,14 @@ async function readAsarEntries() {
       const found = []
       const walk = (node, prefix) => {
         if (!node || typeof node !== 'object') return
-        if (typeof node.offset === 'number' && typeof node.size === 'number' && node.size > 0) {
-          if (/dsh-client-ui-[^/]+\/lib\/client\.js$/.test(prefix)) {
-            found.push({ label: '@deepseek-ai/dsh-client-ui-' + prefix.split('/')[0].replace('dsh-client-ui-', ''), file: null, offset: base + Number(node.offset), size: node.size })
+        // Newer electron-builder asar headers store `offset` (and sometimes
+        // `size`) as decimal STRINGS; older ones store numbers. Accept both.
+        const offset = typeof node.offset === 'number' ? node.offset : typeof node.offset === 'string' ? Number(node.offset) : NaN
+        const size = typeof node.size === 'number' ? node.size : typeof node.size === 'string' ? Number(node.size) : NaN
+        if (Number.isFinite(offset) && Number.isFinite(size) && size > 0) {
+          const match = /(dsh-client-ui-[^/]+)\/lib\/client\.js$/.exec(prefix)
+          if (match) {
+            found.push({ label: '@deepseek-ai/' + match[1], file: null, offset: base + offset, size })
           }
           return
         }

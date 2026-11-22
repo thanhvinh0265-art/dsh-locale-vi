@@ -8,14 +8,21 @@ client plugin that publishes English strings through `ctx.locale`.
 | | |
 |---|---|
 | Languages added | `vi` (fallback `en`) |
-| Namespaces | **61** |
-| Translated keys | **3,477** |
-| Source strings | ~84,000 characters of English |
+| Namespaces | **68** |
+| Translated keys | **3,906** |
+| Source strings | ~96,000 characters of English |
 | Dependencies | none |
 | Host code | optional: the `/vi-sync` command (re-scans installed plugins for new English strings) |
 
 ## Changelog
 
+- **0.3.0** — `/vi-sync` actually works again on current desktop builds: electron-builder now
+  stores asar `offset` values as decimal *strings*, and the scanner only accepted numbers, so it
+  read **zero** bundles out of `app.asar` and reported "already complete" while the UI stayed
+  English. The scanner now accepts both shapes; re-scanning a 2026-11 install added the
+  `agent-team`, `creationRecommendations`, `pluginRecommendations`, `actionCards`, `fileActions`
+  and `sidebarDocumentPreview` namespaces plus new keys across `pluginManager`, `settings.*`,
+  `conversation`, `chat` and others — 429 new strings, 68 namespaces, 3,906 keys in total.
 - **0.2.0** — extraction rewrite: bundles that write dictionary keys as bare identifiers
   (`nav: "Built-in plugins"`) were skipped by 0.1.0, which left Settings, Plugin Manager,
   Model settings, Account, Shortcuts, Schedule and the sidebar panels in English. 32 new
